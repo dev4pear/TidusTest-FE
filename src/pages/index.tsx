@@ -9,7 +9,7 @@ import Head from "next/head";
 import styles from "../styles/Home.module.css";
 import { config } from "../wagmi";
 import NFT from "../ABI/nft.json";
-import { polygonAmoy } from "viem/chains";
+import { sepolia } from "viem/chains";
 import axios from "axios";
 import { setNFTs } from "../store/nftSlice";
 import { ToastContainer, toast } from "react-toastify";
@@ -26,7 +26,7 @@ const Home: NextPage = () => {
       address: process.env.NEXT_PUBLIC_NFT_ADDRESS as Address,
       abi: NFT,
       functionName: "getOwnedNFTs",
-      chainId: polygonAmoy.id,
+      chainId: sepolia.id,
       args: [address],
     })) as number[];
     const myNfts = await Promise.all(
@@ -35,11 +35,10 @@ const Home: NextPage = () => {
           address: process.env.NEXT_PUBLIC_NFT_ADDRESS as Address,
           abi: NFT,
           functionName: "tokenURI",
-          chainId: polygonAmoy.id,
+          chainId: sepolia.id,
           args: [tokenId],
         });
 
-        tokenUri = `${tokenUri}.json`;
         const { data: metadata } = await axios.get(tokenUri as string);
         return metadata;
       })
@@ -63,7 +62,7 @@ const Home: NextPage = () => {
         functionName: "mint",
         args: [address, 1],
         value: parseUnits("0.0001", 18),
-        chainId: polygonAmoy.id,
+        chainId: sepolia.id,
         connector,
       });
 
@@ -74,9 +73,15 @@ const Home: NextPage = () => {
       }, 5000);
 
       return { res: true, hash: hash };
-    } catch (error) {
-      console.log(error);
-      toast.error("You don't have enough balance!");
+    } catch (error: any) {
+      console.log(error.message);
+      if (String(error.message).includes("User rejected the request.")) {
+        toast.warning("User rejected the request.");
+      } else if (String(error.message).includes("executing this transaction exceeds the balance of the account.")) {
+        toast.error("You don't have enough balance!");
+      } else {
+        toast.error("Something went wrong!");
+      }
     }
   };
 
